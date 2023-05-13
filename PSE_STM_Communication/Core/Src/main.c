@@ -22,6 +22,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <stdint.h>
+#include <stdbool.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +34,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define MSG_TOTAL_BYTES			13
+#define BUFFER_MSG_CAPACITY		20	// In messages
+#define EV_REQ_ID				0xFF
 
 /* USER CODE END PD */
 
@@ -49,6 +56,23 @@ HCD_HandleTypeDef hhcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
 
+typedef uint8_t MsgBuffer_t[MSG_TOTAL_BYTES];
+
+static MsgBuffer_t _emMsgBuf[BUFFER_MSG_CAPACITY] = {0};
+static MsgBuffer_t _evMsgBuf[BUFFER_MSG_CAPACITY] = {0};
+
+static UART_HandleTypeDef *pEM_UART = &huart4;
+static UART_HandleTypeDef *pEV_UART = &huart5;
+
+static int _emBufRcvIndex = 0;
+static int _emBufSendIndex = 0;
+
+static int _evBufRcvIndex = 0;
+static int _evBufSendIndex = 0;
+
+static bool _emTxAvailable = true;
+static bool _evTxAvailable = true;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +89,80 @@ static void MX_UART5_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+static inline bool checkBufEmpty(int rcvIndex, int sendIndex)
+{
+	return sendIndex == rcvIndex;
+}
+
+static void increaseBufIndex(int *pIndex, const int BUF_SIZE)
+{
+	(*pIndex)++;
+	if (*pIndex >= BUF_SIZE)
+	{
+		*pIndex = 0;
+	}
+}
+
+static void uartReceiveData(MsgBuffer_t *pBuf, UART_HandleTypeDef *pUart)
+{
+	HAL_UART_Transmit_IT(pUart, (uint8_t *)pBuf, MSG_TOTAL_BYTES);
+}
+
+static void uartTransmitData(MsgBuffer_t *pBuf, UART_HandleTypeDef *pUart)
+{
+	HAL_UART_Receive_IT(pUart, (uint8_t *)pBuf, MSG_TOTAL_BYTES);
+}
+
+static void transmitEvReqToEm()
+{
+	if (!_emTxAvailable)
+		return;
+
+	_emTxAvailable = false;
+	uartTransmitData(&_evMsgBuf[_evBufSendIndex], pEM_UART);
+	increaseBufIndex(&_evBufSendIndex, BUFFER_MSG_CAPACITY);
+}
+
+static void transmitEmDataToEv()
+{
+	if (!_evTxAvailable)
+		return;
+
+	_evTxAvailable = false;
+	uartTransmitData(&_emMsgBuf[_emBufSendIndex], pEV_UART);
+	increaseBufIndex(&_emBufSendIndex, BUFFER_MSG_CAPACITY);
+}
+
+static void handleDataRcv(UART_HandleTypeDef *pUart, MsgBuffer_t *pMsgBuf, int *pRcvIndex)
+{
+	increaseBufIndex(pRcvIndex, BUFFER_MSG_CAPACITY);
+	uartReceiveData(pMsgBuf, pUart);
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == pEM_UART)
+	{
+		handleDataRcv(pEM_UART, _emMsgBuf, &_emBufRcvIndex);
+	}
+	else if (huart == pEV_UART)
+	{
+		handleDataRcv(pEV_UART, _evMsgBuf, &_evBufRcvIndex);
+	}
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == pEM_UART)
+	{
+		_emTxAvailable = true;
+	}
+	else if (huart == pEV_UART)
+	{
+		_evTxAvailable = true;
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -73,45 +171,59 @@ static void MX_UART5_Init(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_SPI1_Init();
-  MX_USB_OTG_FS_HCD_Init();
-  MX_UART4_Init();
-  MX_UART5_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_SPI1_Init();
+	MX_USB_OTG_FS_HCD_Init();
+	MX_UART4_Init();
+	MX_UART5_Init();
+	/* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
+//	HAL_UART_Receive_IT(&huart4, _rcvBuf, 4);
+//
+//	HAL_UART_Transmit_IT(&huart4, _msgBuf, 4);
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
+	/* USER CODE END 2 */
 
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	while (1)
+	{
+		if (!checkBufEmpty(_emBufRcvIndex, _emBufSendIndex))
+		{
+			transmitEmDataToEv();
+		}
+
+		if (!checkBufEmpty(_evBufRcvIndex, _evBufSendIndex))
+		{
+			transmitEvReqToEm();
+		}
+
+	/* USER CODE END WHILE */
+
+	/* USER CODE BEGIN 3 */
+	}
+	/* USER CODE END 3 */
 }
 
 /**
@@ -213,7 +325,7 @@ static void MX_UART4_Init(void)
 
   /* USER CODE END UART4_Init 1 */
   huart4.Instance = UART4;
-  huart4.Init.BaudRate = 115200;
+  huart4.Init.BaudRate = 230400;
   huart4.Init.WordLength = UART_WORDLENGTH_8B;
   huart4.Init.StopBits = UART_STOPBITS_1;
   huart4.Init.Parity = UART_PARITY_NONE;
@@ -246,7 +358,7 @@ static void MX_UART5_Init(void)
 
   /* USER CODE END UART5_Init 1 */
   huart5.Instance = UART5;
-  huart5.Init.BaudRate = 115200;
+  huart5.Init.BaudRate = 230400;
   huart5.Init.WordLength = UART_WORDLENGTH_8B;
   huart5.Init.StopBits = UART_STOPBITS_1;
   huart5.Init.Parity = UART_PARITY_NONE;
