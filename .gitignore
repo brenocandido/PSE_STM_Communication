@@ -1,0 +1,7 @@
+/.metadata
+
+*.d
+*.o
+*.cyclo
+*.su
+*.prefs
