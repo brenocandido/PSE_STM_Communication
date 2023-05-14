@@ -105,12 +105,12 @@ static void increaseBufIndex(int *pIndex, const int BUF_SIZE)
 
 static void uartReceiveData(MsgBuffer_t *pBuf, UART_HandleTypeDef *pUart)
 {
-	HAL_UART_Transmit_IT(pUart, (uint8_t *)pBuf, MSG_TOTAL_BYTES);
+	HAL_UART_Receive_IT(pUart, (uint8_t *)pBuf, MSG_TOTAL_BYTES);
 }
 
 static void uartTransmitData(MsgBuffer_t *pBuf, UART_HandleTypeDef *pUart)
 {
-	HAL_UART_Receive_IT(pUart, (uint8_t *)pBuf, MSG_TOTAL_BYTES);
+	HAL_UART_Transmit_IT(pUart, (uint8_t *)pBuf, MSG_TOTAL_BYTES);
 }
 
 static void transmitEvReqToEm()
@@ -171,42 +171,48 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
   */
 int main(void)
 {
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_SPI1_Init();
-	MX_USB_OTG_FS_HCD_Init();
-	MX_UART4_Init();
-	MX_UART5_Init();
-	/* USER CODE BEGIN 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_SPI1_Init();
+  MX_USB_OTG_FS_HCD_Init();
+  MX_UART4_Init();
+  MX_UART5_Init();
+  /* USER CODE BEGIN 2 */
 
 //	HAL_UART_Receive_IT(&huart4, _rcvBuf, 4);
 //
-//	HAL_UART_Transmit_IT(&huart4, _msgBuf, 4);
+	uartReceiveData(_evMsgBuf, pEV_UART);
+	uartReceiveData(_emMsgBuf, pEM_UART);
 
-	/* USER CODE END 2 */
+	uint8_t dummyData[13] = {0xAA, 0xBB, 0xCC, 0xDD};
+//	uint8_t dummyBuf[13];
+	HAL_UART_Transmit_IT(&huart4, dummyData, 13);
+//	HAL_UART_Receive_IT(&huart5, dummyBuf, 13);
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1)
 	{
 		if (!checkBufEmpty(_emBufRcvIndex, _emBufSendIndex))
@@ -219,11 +225,11 @@ int main(void)
 			transmitEvReqToEm();
 		}
 
-	/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-	/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
