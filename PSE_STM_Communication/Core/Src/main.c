@@ -25,6 +25,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "bufHandler.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,22 +58,14 @@ HCD_HandleTypeDef hhcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
 
-typedef uint8_t MsgBuffer_t[MSG_TOTAL_BYTES];
-
-static MsgBuffer_t _emMsgBuf[BUFFER_MSG_CAPACITY] = {0};
-static MsgBuffer_t _evMsgBuf[BUFFER_MSG_CAPACITY] = {0};
+static MsgBuffer_t _emMsgBuf[BUFFER_MSG_CAPACITY];
+static MsgBuffer_t _evMsgBuf[BUFFER_MSG_CAPACITY];
 
 static UART_HandleTypeDef *pEM_UART = &huart4;
 static UART_HandleTypeDef *pEV_UART = &huart5;
 
-static int _emBufRcvIndex = 0;
-static int _emBufSendIndex = 0;
-
-static int _evBufRcvIndex = 0;
-static int _evBufSendIndex = 0;
-
-static bool _emTxAvailable = true;
-static bool _evTxAvailable = true;
+static BufHandler_t _emHandler;
+static BufHandler_t _evHandler;
 
 /* USER CODE END PV */
 
@@ -89,77 +83,84 @@ static void MX_UART5_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-static inline bool checkBufEmpty(int rcvIndex, int sendIndex)
+// For signaling reception reception
+static void dummyTestFunc()
 {
-	return sendIndex == rcvIndex;
-}
+    const uint32_t LED_ON = LD3_Pin << 16;
+	const uint32_t LED_OFF = LD3_Pin;
+	const uint32_t CNT_MAX = 250;
 
-static void increaseBufIndex(int *pIndex, const int BUF_SIZE)
-{
-	(*pIndex)++;
-	if (*pIndex >= BUF_SIZE)
-	{
-		*pIndex = 0;
-	}
-}
+	static uint32_t cnt = 0;
+	static uint8_t ledState = 0;
 
-static void uartReceiveData(MsgBuffer_t *pBuf, UART_HandleTypeDef *pUart)
-{
-	HAL_UART_Receive_IT(pUart, (uint8_t *)pBuf, MSG_TOTAL_BYTES);
-}
+    cnt++;
+    if (cnt >= CNT_MAX)
+    {
+        cnt = 0;
+        ledState = !ledState;
 
-static void uartTransmitData(MsgBuffer_t *pBuf, UART_HandleTypeDef *pUart)
-{
-	HAL_UART_Transmit_IT(pUart, (uint8_t *)pBuf, MSG_TOTAL_BYTES);
+        if (ledState)
+        {
+            LD3_GPIO_Port->BSRR = LED_ON;
+        }
+        else
+        {
+            LD3_GPIO_Port->BSRR = LED_OFF;
+        }
+    }
 }
 
 static void transmitEvReqToEm()
 {
-	if (!_emTxAvailable)
-		return;
+    bool ret = bufHandler_transmitUartData(&_evHandler);
 
-	_emTxAvailable = false;
-	uartTransmitData(&_evMsgBuf[_evBufSendIndex], pEM_UART);
-	increaseBufIndex(&_evBufSendIndex, BUFFER_MSG_CAPACITY);
+    if (!ret)
+    {
+        return;
+    }
+
+	bufHandler_increaseSendIndex(&_evHandler);
 }
 
 static void transmitEmDataToEv()
 {
-	if (!_evTxAvailable)
-		return;
+    bool ret = bufHandler_transmitUartData(&_emHandler);
 
-	_evTxAvailable = false;
-	uartTransmitData(&_emMsgBuf[_emBufSendIndex], pEV_UART);
-	increaseBufIndex(&_emBufSendIndex, BUFFER_MSG_CAPACITY);
+    if (!ret)
+    {
+        return;
+    }
+
+	bufHandler_increaseSendIndex(&_emHandler);
 }
 
-static void handleDataRcv(UART_HandleTypeDef *pUart, MsgBuffer_t *pMsgBuf, int *pRcvIndex)
+static void handleDataRcv(BufHandler_t *pHandler)
 {
-	increaseBufIndex(pRcvIndex, BUFFER_MSG_CAPACITY);
-	uartReceiveData(pMsgBuf, pUart);
+    bufHandler_increaseRcvIndex(pHandler);
+    bufHandler_receiveUartData(pHandler);
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart == pEM_UART)
 	{
-		handleDataRcv(pEM_UART, _emMsgBuf, &_emBufRcvIndex);
+		handleDataRcv(&_emHandler);
 	}
 	else if (huart == pEV_UART)
 	{
-		handleDataRcv(pEV_UART, _evMsgBuf, &_evBufRcvIndex);
+		handleDataRcv(&_evHandler);
 	}
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if (huart == pEM_UART)
+	if (huart == bufHandler_txUart(&_emHandler))
 	{
-		_emTxAvailable = true;
+        bufHandler_setTxAvailable(&_emHandler);
 	}
-	else if (huart == pEV_UART)
+	else if (huart == bufHandler_txUart(&_evHandler))
 	{
-		_evTxAvailable = true;
+		bufHandler_setTxAvailable(&_evHandler);
 	}
 }
 
@@ -199,15 +200,18 @@ int main(void)
   MX_UART5_Init();
   /* USER CODE BEGIN 2 */
 
-//	HAL_UART_Receive_IT(&huart4, _rcvBuf, 4);
-//
-	uartReceiveData(_evMsgBuf, pEV_UART);
-	uartReceiveData(_emMsgBuf, pEM_UART);
+    bufHandler_init(&_emHandler, _emMsgBuf, BUFFER_MSG_CAPACITY);
+    bufHandler_init(&_evHandler, _evMsgBuf, BUFFER_MSG_CAPACITY);
 
+    bufHandler_setUart(&_emHandler, pEV_UART, pEM_UART);
+    bufHandler_setUart(&_evHandler, pEM_UART, pEV_UART);
+
+    bufHandler_receiveUartData(&_emHandler);
+    bufHandler_receiveUartData(&_evHandler);
+
+    // Dummy test send to check UART reception.
 	uint8_t dummyData[13] = {0xAA, 0xBB, 0xCC, 0xDD};
-//	uint8_t dummyBuf[13];
-	HAL_UART_Transmit_IT(&huart4, dummyData, 13);
-//	HAL_UART_Receive_IT(&huart5, dummyBuf, 13);
+	HAL_UART_Transmit_IT(&huart5, dummyData, 13);
 
   /* USER CODE END 2 */
 
@@ -215,14 +219,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		if (!checkBufEmpty(_emBufRcvIndex, _emBufSendIndex))
+		if (!bufHandler_checkEmpty(&_emHandler))
 		{
 			transmitEmDataToEv();
+
+            dummyTestFunc();
 		}
 
-		if (!checkBufEmpty(_evBufRcvIndex, _evBufSendIndex))
+		if (!bufHandler_checkEmpty(&_evHandler))
 		{
 			transmitEvReqToEm();
+
+			dummyTestFunc();
 		}
 
     /* USER CODE END WHILE */
