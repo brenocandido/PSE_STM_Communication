@@ -60,8 +60,8 @@ all: main-build
 main-build: PSE_STM_Communication.elf secondary-outputs
 
 # Tool invocations
-PSE_STM_Communication.elf PSE_STM_Communication.map: $(OBJS) $(USER_OBJS) E:\Projetos\Mestrado\PSE_STM_Communication\PSE_STM_Communication\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "PSE_STM_Communication.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"E:\Projetos\Mestrado\PSE_STM_Communication\PSE_STM_Communication\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="PSE_STM_Communication.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+PSE_STM_Communication.elf PSE_STM_Communication.map: $(OBJS) $(USER_OBJS) C:\PSE_STM_Communication\PSE_STM_Communication\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "PSE_STM_Communication.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\PSE_STM_Communication\PSE_STM_Communication\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="PSE_STM_Communication.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

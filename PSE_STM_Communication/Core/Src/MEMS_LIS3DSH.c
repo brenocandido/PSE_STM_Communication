@@ -144,6 +144,19 @@ MEMS_DataScaled_T MEMS_GetDataScaled(void)
 	return tempScaledData;
 }
 
+MEMS_DataScaled_T MEMS_GetDataMS2(void)
+{
+	// Read Scaled data
+	MEMS_DataScaled_T tempData = MEMS_GetDataScaled();
+	
+	// Scale
+	tempData.x = (tempData.x * GRAVITY_VALUE) / 1000.0f;
+	tempData.y = (tempData.y * GRAVITY_VALUE) / 1000.0f;
+	tempData.z = (tempData.z * GRAVITY_VALUE) / 1000.0f;
+	
+	return tempData;
+}
+
 void MEMS_X_calibrate(float x_min, float x_max)
 {
 	calibration.x.Bias	= (x_max+x_min)/2.0f;

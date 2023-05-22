@@ -118,6 +118,7 @@ void selectSensitivity(uint8_t fullScale);
 int16_t MEMS_GetAxesData(uint8_t addr);
 MEMS_DataRaw_T MEMS_GetDataRaw(void);
 MEMS_DataScaled_T MEMS_GetDataScaled(void);
+MEMS_DataScaled_T MEMS_GetDataMS2(void);
 
 void MEMS_X_calibrate(float x_min, float x_max);
 void MEMS_Y_calibrate(float y_min, float y_max);
