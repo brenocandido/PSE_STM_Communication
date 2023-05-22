@@ -21,12 +21,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "MEMS_LIS3DSH.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+MEMS_DataScaled_T MEMSData;
+MEMS_Config_T     MEMSConfig;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -101,12 +102,28 @@ int main(void)
   MX_UART5_Init();
   /* USER CODE BEGIN 2 */
 
+  // MEMS Configuration
+  MEMSConfig.dataRate   = LIS3DSH_ODR_800;
+  MEMSConfig.fullScale  = LIS3DSH_FSCALE_8;
+  MEMSConfig.enableAxes = LIS3DSH_XYZ_ENABLE;
+
+  // MEMS Init
+  MEMS_Init(&hspi1, &MEMSConfig);
+
+  // MEMS Calibration
+//  MEMS_X_calibrate(-1000.0, 980.0);
+//  MEMS_Y_calibrate(-1020.0, 1040.0);
+//  MEMS_Z_calibrate(-920.0, 1040.0);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  // Get MEMS Data
+	  MEMSData = MEMS_GetDataScaled();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -182,7 +199,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
