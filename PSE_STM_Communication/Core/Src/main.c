@@ -22,6 +22,12 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "bufHandler.h"
+#include "ledToggler.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +37,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define MSG_TOTAL_BYTES			13
+#define BUFFER_MSG_CAPACITY		20	// In messages
+#define EV_REQ_ID				0xFF
 
 /* USER CODE END PD */
 
@@ -49,6 +59,18 @@ HCD_HandleTypeDef hhcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
 
+static MsgBuffer_t _emMsgBuf[BUFFER_MSG_CAPACITY];
+static MsgBuffer_t _evMsgBuf[BUFFER_MSG_CAPACITY];
+
+static UART_HandleTypeDef *pEM_UART = &huart4;
+static UART_HandleTypeDef *pEV_UART = &huart5;
+
+static BufHandler_t _emHandler;
+static BufHandler_t _evHandler;
+
+static MsgBuffer_t _sensorData = {0};
+static bool _sendSensorData = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,6 +86,69 @@ static void MX_UART5_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+static void triggerSensorDataSend()
+{
+    _sendSensorData = true;
+}
+
+static void transmitEvReqToEm()
+{
+    bool ret = bufHandler_transmitUartData(&_evHandler);
+
+    if (!ret)
+    {
+        return;
+    }
+
+	bufHandler_increaseSendIndex(&_evHandler);
+}
+
+static void transmitEmDataToEv()
+{
+    bool ret = bufHandler_transmitUartData(&_emHandler);
+
+    if (!ret)
+    {
+        return;
+    }
+
+	bufHandler_increaseSendIndex(&_emHandler);
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == bufHandler_rxUart(&_emHandler))
+	{
+        bufHandler_increaseRcvIndex(&_emHandler);
+        bufHandler_receiveUartData(&_emHandler);
+	}
+	else if (huart == bufHandler_rxUart(&_evHandler))
+	{
+		const uint8_t *msg = bufHandler_getReceivedData(&_evHandler);
+
+        // If the msg ID isn't valid, the message will simply be dropped.
+        if (msg[0] == EV_REQ_ID)
+        {
+            bufHandler_increaseRcvIndex(&_evHandler);
+            triggerSensorDataSend();
+        }
+
+        bufHandler_receiveUartData(&_evHandler);
+	}
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == bufHandler_txUart(&_emHandler))
+	{
+        bufHandler_setTxAvailable(&_emHandler);
+	}
+	else if (huart == bufHandler_txUart(&_evHandler))
+	{
+		bufHandler_setTxAvailable(&_evHandler);
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -101,16 +186,65 @@ int main(void)
   MX_UART5_Init();
   /* USER CODE BEGIN 2 */
 
+    LedToggler_t togglerRed;
+    LedToggler_t togglerGreen;
+
+    ledToggler_init(&togglerRed, 250, LD5_GPIO_Port, LD5_Pin);
+    ledToggler_init(&togglerGreen, 250, LD4_GPIO_Port, LD4_Pin);
+
+    bufHandler_init(&_emHandler, _emMsgBuf, BUFFER_MSG_CAPACITY);
+    bufHandler_init(&_evHandler, _evMsgBuf, BUFFER_MSG_CAPACITY);
+
+    bufHandler_setUart(&_emHandler, pEV_UART, pEM_UART);
+    bufHandler_setUart(&_evHandler, pEM_UART, pEV_UART);
+
+    bufHandler_receiveUartData(&_emHandler);
+    bufHandler_receiveUartData(&_evHandler);
+
+    // Dummy test send to check UART reception.
+    for (uint8_t i = 0; i < MSG_TOTAL_BYTES; i++)
+    {
+        _sensorData[i] = i + 1;
+    }
+    triggerSensorDataSend();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+	while (1)
+	{
+        // Check first in order to send as soon as the UART is available
+        if (_sendSensorData)
+        {
+            // We use the _emHandler because that's where the EV TX UART is
+            // configured. It's as if the sensor data had come through the EM
+            // UART>
+            bool ret = bufHandler_sendData(&_emHandler, _sensorData);
+
+            // Will only return true when it successfully sent data.
+            if (ret)
+            {
+                _sendSensorData = false;
+            }
+        }
+
+		if (!bufHandler_checkEmpty(&_emHandler))
+		{
+			transmitEmDataToEv();
+            ledToggler_run(&togglerRed);
+		}
+
+		if (!bufHandler_checkEmpty(&_evHandler))
+		{
+			transmitEvReqToEm();
+            ledToggler_run(&togglerGreen);
+		}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+	}
   /* USER CODE END 3 */
 }
 
@@ -213,7 +347,7 @@ static void MX_UART4_Init(void)
 
   /* USER CODE END UART4_Init 1 */
   huart4.Instance = UART4;
-  huart4.Init.BaudRate = 115200;
+  huart4.Init.BaudRate = 230400;
   huart4.Init.WordLength = UART_WORDLENGTH_8B;
   huart4.Init.StopBits = UART_STOPBITS_1;
   huart4.Init.Parity = UART_PARITY_NONE;
@@ -246,7 +380,7 @@ static void MX_UART5_Init(void)
 
   /* USER CODE END UART5_Init 1 */
   huart5.Instance = UART5;
-  huart5.Init.BaudRate = 115200;
+  huart5.Init.BaudRate = 230400;
   huart5.Init.WordLength = UART_WORDLENGTH_8B;
   huart5.Init.StopBits = UART_STOPBITS_1;
   huart5.Init.Parity = UART_PARITY_NONE;
