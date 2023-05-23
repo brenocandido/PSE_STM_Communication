@@ -27,12 +27,14 @@
 
 #include "bufHandler.h"
 #include "ledToggler.h"
-
+#include "MEMS_LIS3DSH.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+MEMS_DataScaled_t MEMSData;
+MEMSHandler_t     hMEMS;
+MEMS_Config_t     MEMSConfig;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -186,6 +188,22 @@ int main(void)
   MX_UART5_Init();
   /* USER CODE BEGIN 2 */
 
+  // MEMS Configuration
+  MEMSConfig.dataRate   = LIS3DSH_ODR_100;
+  MEMSConfig.fullScale  = LIS3DSH_FSCALE_2;
+  MEMSConfig.enableAxes = LIS3DSH_XYZ_ENABLE;
+
+  // MEMS Init
+  MEMS_Init(&hMEMS, &hspi1, MEMSConfig);
+
+  // uint8_t who_am_i[1];
+  // MEMS_ReadReg(hMEMS.pSPI,LIS3DSH_WHO_AM_I_ADDR,who_am_i,1);
+
+  // MEMS Calibration
+  //  MEMS_X_calibrate(-1000.0, 980.0);
+  //  MEMS_Y_calibrate(-1020.0, 1040.0);
+  //  MEMS_Z_calibrate(-920.0, 1040.0);
+
     LedToggler_t togglerRed;
     LedToggler_t togglerGreen;
 
@@ -316,7 +334,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
