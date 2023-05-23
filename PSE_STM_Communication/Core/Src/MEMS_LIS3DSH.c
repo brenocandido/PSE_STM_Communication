@@ -1,6 +1,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "MEMS_LIS3DSH.h"
+#include <string.h>
+#include <stdint.h>
 
 /* Private define ------------------------------------------------------------*/
 	
@@ -99,6 +101,10 @@ void MEMS_Init(MEMSHandler_t *pHandler, SPI_HandleTypeDef *pSPI_ext, MEMS_Config
 	pHandler->config.calibration.x.Bias = 0.0f;
 	pHandler->config.calibration.y.Bias = 0.0f;
 	pHandler->config.calibration.z.Bias = 0.0f;
+
+	memset((void *)&pHandler->rawData, 0, sizeof(pHandler->rawData));
+	memset((void *)&pHandler->scaledData, 0, sizeof(pHandler->scaledData));
+	memset((void *)&pHandler->accData, 0, sizeof(pHandler->accData));
 }
 
 int16_t MEMS_GetAxesData(SPI_HandleTypeDef *pSPI, uint8_t addr)
@@ -112,46 +118,38 @@ int16_t MEMS_GetAxesData(SPI_HandleTypeDef *pSPI, uint8_t addr)
 	return DataRaw;
 }
 
-MEMS_DataRaw_t MEMS_GetDataRaw(MEMSHandler_t *pHandler)
+void MEMS_processDataRaw(MEMSHandler_t *pHandler)
 {
-	MEMS_DataRaw_t tempDataRaw;
-	
 	// Get XYZ data
-	tempDataRaw.x = MEMS_GetAxesData(pHandler->pSPI,LIS3DSH_OUT_X_L_ADDR);
-	tempDataRaw.y = MEMS_GetAxesData(pHandler->pSPI,LIS3DSH_OUT_Y_L_ADDR);
-	tempDataRaw.z = MEMS_GetAxesData(pHandler->pSPI,LIS3DSH_OUT_Z_L_ADDR);
-
-	return tempDataRaw;
+	pHandler->rawData.x = MEMS_GetAxesData(pHandler->pSPI,LIS3DSH_OUT_X_L_ADDR);
+	pHandler->rawData.y = MEMS_GetAxesData(pHandler->pSPI,LIS3DSH_OUT_Y_L_ADDR);
+	pHandler->rawData.z = MEMS_GetAxesData(pHandler->pSPI,LIS3DSH_OUT_Z_L_ADDR);
 }
 
-MEMS_DataScaled_t MEMS_GetDataScaled(MEMSHandler_t *pHandler)
+void MEMS_processDataScaled(MEMSHandler_t *pHandler)
 {
-	// Read raw data
-	MEMS_DataRaw_t tempRawData = MEMS_GetDataRaw(pHandler);
-	
-	// Scale
-	MEMS_DataScaled_t tempScaledData;
-	tempScaledData.x = (tempRawData.x * pHandler->config.calibration.Sensitivity  * pHandler->config.calibration.x.Scale) +
-						0.0f - pHandler->config.calibration.x.Bias;
-	tempScaledData.y = (tempRawData.y * pHandler->config.calibration.Sensitivity  * pHandler->config.calibration.y.Scale) +
-						0.0f - pHandler->config.calibration.y.Bias;
-	tempScaledData.z = (tempRawData.z * pHandler->config.calibration.Sensitivity  * pHandler->config.calibration.z.Scale) +
-						0.0f - pHandler->config.calibration.z.Bias;
-	
-	return tempScaledData;
+	float valX = pHandler->rawData.x * pHandler->config.calibration.Sensitivity;
+	float valY = pHandler->rawData.y * pHandler->config.calibration.Sensitivity;
+	float valZ = pHandler->rawData.z * pHandler->config.calibration.Sensitivity;
+
+	pHandler->scaledData.x = 	(valX  * pHandler->config.calibration.x.Scale) +
+								0.0f - pHandler->config.calibration.x.Bias;
+	pHandler->scaledData.y = 	(valY  * pHandler->config.calibration.y.Scale) +
+								0.0f - pHandler->config.calibration.y.Bias;
+	pHandler->scaledData.z = 	(valZ  * pHandler->config.calibration.z.Scale) +
+								0.0f - pHandler->config.calibration.z.Bias;
 }
 
-MEMS_DataScaled_t MEMS_GetDataMS2(MEMSHandler_t *pHandler)
+void MEMS_processDataMS2(MEMSHandler_t *pHandler)
 {
-	// Read Scaled data
-	MEMS_DataScaled_t tempData = MEMS_GetDataScaled(pHandler);
-	
-	// Scale
-	tempData.x = (tempData.x * GRAVITY_VALUE) / 1000.0f;
-	tempData.y = (tempData.y * GRAVITY_VALUE) / 1000.0f;
-	tempData.z = (tempData.z * GRAVITY_VALUE) / 1000.0f;
-	
-	return tempData;
+	pHandler->accData.x = (pHandler->scaledData.x * GRAVITY_VALUE) * 0.001;
+	pHandler->accData.y = (pHandler->scaledData.y * GRAVITY_VALUE) * 0.001;
+	pHandler->accData.z = (pHandler->scaledData.z * GRAVITY_VALUE) * 0.001;
+}
+
+MEMS_DataScaled_t MEMS_getDataMS2(MEMSHandler_t *pHandler)
+{
+	return pHandler->accData;
 }
 
 void MEMS_X_calibrate(MEMSHandler_t *pHandler, float x_min, float x_max)
