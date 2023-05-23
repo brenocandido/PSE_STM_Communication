@@ -144,12 +144,12 @@ static void transmitEmDataToEv()
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if (huart == pEM_UART)
+	if (huart == bufHandler_rxUart(&_emHandler))
 	{
         bufHandler_increaseRcvIndex(&_emHandler);
         bufHandler_receiveUartData(&_emHandler);
 	}
-	else if (huart == pEV_UART)
+	else if (huart == bufHandler_rxUart(&_evHandler))
 	{
 		const uint8_t *msg = bufHandler_getReceivedData(&_evHandler);
 

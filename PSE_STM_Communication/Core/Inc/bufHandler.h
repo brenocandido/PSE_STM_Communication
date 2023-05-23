@@ -88,4 +88,7 @@ void bufHandler_setTxAvailable(BufHandler_t *pHandler);
 /// \brief Returns the pointer to the configured TX UART.
 UART_HandleTypeDef *bufHandler_txUart(BufHandler_t *pHandler);
 
+/// \brief Returns the pointer to the configured RX UART.
+UART_HandleTypeDef *bufHandler_rxUart(BufHandler_t *pHandler);
+
 #endif // BUFHANDLER_H_

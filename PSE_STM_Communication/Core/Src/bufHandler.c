@@ -143,6 +143,16 @@ UART_HandleTypeDef *bufHandler_txUart(BufHandler_t *pHandler)
     return pHandler->pTxUart;
 }
 
+UART_HandleTypeDef *bufHandler_rxUart(BufHandler_t *pHandler)
+{
+    if (!pHandler)
+    {
+        return NULL;
+    }
+
+    return pHandler->pRxUart;
+}
+
 static void _increaseBufIndex(int *pIndex, const int BUF_SIZE)
 {
 	(*pIndex)++;
