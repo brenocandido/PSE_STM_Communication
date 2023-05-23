@@ -138,7 +138,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         if (msg[0] == EV_REQ_ID)
         {
             bufHandler_increaseRcvIndex(&_evHandler);
-            triggerSensorDataSend();
+            triggerReadSensorData();
         }
 
         bufHandler_receiveUartData(&_evHandler);
