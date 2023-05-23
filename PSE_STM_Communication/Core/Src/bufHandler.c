@@ -64,6 +64,16 @@ bool bufHandler_sendData(BufHandler_t *pHandler, MsgBuffer_t data)
     return true;
 }
 
+const uint8_t *bufHandler_getReceivedData(BufHandler_t *pHandler)
+{
+    if (!pHandler || !pHandler->msgBuf)
+    {
+        return NULL;
+    }
+
+    return pHandler->msgBuf[pHandler->bufRcvIndex];
+}
+
 void bufHandler_increaseRcvIndex(BufHandler_t *pHandler)
 {
     if (!pHandler)

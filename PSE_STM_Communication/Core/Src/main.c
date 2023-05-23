@@ -142,21 +142,25 @@ static void transmitEmDataToEv()
 	bufHandler_increaseSendIndex(&_emHandler);
 }
 
-static void handleDataRcv(BufHandler_t *pHandler)
-{
-    bufHandler_increaseRcvIndex(pHandler);
-    bufHandler_receiveUartData(pHandler);
-}
-
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart == pEM_UART)
 	{
-		handleDataRcv(&_emHandler);
+        bufHandler_increaseRcvIndex(&_emHandler);
+        bufHandler_receiveUartData(&_emHandler);
 	}
 	else if (huart == pEV_UART)
 	{
-		handleDataRcv(&_evHandler);
+		const uint8_t *msg = bufHandler_getReceivedData(&_evHandler);
+
+        // If the msg ID isn't valid, the message will simply be dropped.
+        if (msg[0] == EV_REQ_ID)
+        {
+            bufHandler_increaseRcvIndex(&_evHandler);
+            triggerSensorDataSend();
+        }
+
+        bufHandler_receiveUartData(&_evHandler);
 	}
 }
 

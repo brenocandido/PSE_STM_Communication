@@ -55,6 +55,9 @@ bool bufHandler_checkEmpty(BufHandler_t *pHandler);
 /// \return true if the send was successful, else false.
 bool bufHandler_sendData(BufHandler_t *pHandler, MsgBuffer_t data);
 
+/// \brief Returns the last received MsgBuffer.
+const uint8_t *bufHandler_getReceivedData(BufHandler_t *pHandler);
+
 /// \brief Increases the receive index for the message buffer.
 ///
 /// A receive index may be increased after it has successfully received a
