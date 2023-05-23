@@ -43,6 +43,7 @@ MEMS_Config_t     MEMSConfig;
 #define MSG_TOTAL_BYTES			13
 #define BUFFER_MSG_CAPACITY		20	// In messages
 #define EV_REQ_ID				0xFF
+#define ID_SELF                 ((uint8_t)1)
 
 /* USER CODE END PD */
 
@@ -98,6 +99,13 @@ static void triggerSensorDataSend()
 {
     _sendSensorData = true;
 }
+
+// Trigger sampling of sensor data
+void triggerReadSensorData()
+{
+	_readSensorData = true;
+}
+
 
 static void transmitEvReqToEm()
 {
@@ -158,35 +166,14 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 }
 
 // Convert MEMS_DataScaled_t data type to MsgBuffer_t data type
-/*MsgBuffer_t convert_bufType(MEMS_DataScaled_t MEMS_data)
+void convert_bufType(MEMS_DataScaled_t MEMS_data, MsgBuffer_t buf)
 {
-	MsgBuffer_t MsgBuff_data = {0};
+    buf[0] = ID_SELF;
 
-	// Convert x data (LSB first?)
-	MsgBuff_data[0] = MEMS_data.x & 0x000000FF;
-	MsgBuff_data[1] = (MEMS_data.x & 0x0000FF00) >> 8;
-	MsgBuff_data[2] = (MEMS_data.x & 0x00FF0000) >> 16;
-	MsgBuff_data[3] = (MEMS_data.x & 0xFF000000) >> 24;
-
-	// Convert y data (LSB first?)
-	MsgBuff_data[4] = MEMS_data.y & 0x000000FF;
-	MsgBuff_data[5] = (MEMS_data.y & 0x0000FF00) >> 8;
-	MsgBuff_data[6] = (MEMS_data.y & 0x00FF0000) >> 16;
-	MsgBuff_data[7] = (MEMS_data.y & 0xFF000000) >> 24;
-
-	// Convert z data (LSB first?)
-	MsgBuff_data[8] = MEMS_data.z & 0x000000FF;
-	MsgBuff_data[9] = (MEMS_data.z & 0x0000FF00) >> 8;
-	MsgBuff_data[10] = (MEMS_data.z & 0x00FF0000) >> 16;
-	MsgBuff_data[11] = (MEMS_data.z & 0xFF000000) >> 24;
-
-	return MsgBuff_data;
-}*/
-
-// Trigger sampling of sensor data
-void triggerReadSensorData()
-{
-	_readSensorData = true;
+    float *sensorData = (float *)&buf[1];
+    sensorData[0] = MEMSData.x;
+    sensorData[1] = MEMSData.y;
+    sensorData[2] = MEMSData.z;
 }
 
 // Timer 2 callback -> request sensor read (LED for debug)
@@ -283,6 +270,26 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
+        // Sample sensor data if requested ...
+        if (_readSensorData)
+        {
+            MEMS_processDataRaw(&hMEMS);
+            MEMS_processDataScaled(&hMEMS);
+            MEMS_processDataMS2(&hMEMS);
+
+        	// Read data from LIS3DSH
+        	MEMSData = MEMS_getDataMS2(&hMEMS);
+
+        	// Convert MEMS_DataScaled_t to MsgBuffer_t type
+            convert_bufType(MEMSData, _sensorData);
+
+        	// Trigger UART to send sensor data
+        	triggerSensorDataSend();
+
+        	// Clear flag t enable a new sensor read request
+        	_readSensorData = false;
+        }
+
         // Check first in order to send as soon as the UART is available
         if (_sendSensorData)
         {
@@ -308,22 +315,6 @@ int main(void)
         {
             transmitEvReqToEm();
             ledToggler_run(&togglerGreen);
-        }
-
-        // Sample sensor data if requested ...
-        if (_readSensorData)
-        {
-        	// Read data from LIS3DSH
-        	MEMSData = MEMS_GetDataMS2(&hMEMS);
-
-        	// Convert MEMS_DataScaled_t to MsgBuffer_t type
-        	// _sensorData = convert_bufType(MEMSData);
-
-        	// Trigger UART to send sensor data (should have a check of UART current usage?)
-        	triggerSensorDataSend();
-
-        	// Clear flag t enable a new sensor read request
-        	_readSensorData = false;
         }
 
     /* USER CODE END WHILE */
