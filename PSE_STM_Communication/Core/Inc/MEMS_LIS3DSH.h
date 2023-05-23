@@ -72,57 +72,66 @@
 
 /* Typedef Structs -----------------------------------------------------------*/
 
-// Config Struct
-typedef struct 
-{
-	uint8_t dataRate;
-	uint8_t fullScale;
-	uint8_t enableAxes;
-}MEMS_Config_T;
-
 // Data Struct
 typedef struct
 {
 	int16_t x;
 	int16_t y;
 	int16_t z;
-}MEMS_DataRaw_T;
+}MEMS_DataRaw_t;
 
 typedef struct
 {
 	float x;
 	float y;
 	float z;
-}MEMS_DataScaled_T;
+}MEMS_DataScaled_t;
 
 // Calibration Struct
 typedef struct 
 {
 	float Bias;
 	float Scale;
-}MEMS_AxesCalibration_T;
+}MEMS_AxesCalibration_t;
 
 typedef struct 
 {
-	MEMS_AxesCalibration_T x;
-	MEMS_AxesCalibration_T y;
-	MEMS_AxesCalibration_T z;
-}MEMS_Calibration_T;
+	float Sensitivity;
+	MEMS_AxesCalibration_t x;
+	MEMS_AxesCalibration_t y;
+	MEMS_AxesCalibration_t z;
+}MEMS_Calibration_t;
+
+// Config Struct
+typedef struct 
+{
+	uint8_t dataRate;
+	uint8_t fullScale;
+	uint8_t enableAxes;
+	MEMS_Calibration_t calibration;
+}MEMS_Config_t;
+
+// Handle Struct
+typedef struct
+{
+    SPI_HandleTypeDef *pSPI;
+	MEMS_Config_t config;
+} MEMSHandler_t;
 
 /* Function prototypes -----------------------------------------------*/
-void MEMS_Init(SPI_HandleTypeDef *extSPI_Handle, MEMS_Config_T *memsConfig);
-void MEMS_WriteReg(uint8_t addr, uint8_t *data, uint8_t size);
-void MEMS_ReadReg(uint8_t addr, uint8_t *data, uint8_t size);
-void selectSensitivity(uint8_t fullScale);
+void MEMS_Init(MEMSHandler_t *pHandler, SPI_HandleTypeDef *pSPI_ext, MEMS_Config_t pConfig);
+void MEMS_WriteReg(SPI_HandleTypeDef *pSPI, uint8_t addr, uint8_t *data, uint8_t size);
+void MEMS_ReadReg(SPI_HandleTypeDef *pSPI, uint8_t addr, uint8_t *data, uint8_t size);
+void selectSensitivity(MEMS_Config_t *pConfig);
 
-int16_t MEMS_GetAxesData(uint8_t addr);
-MEMS_DataRaw_T MEMS_GetDataRaw(void);
-MEMS_DataScaled_T MEMS_GetDataScaled(void);
-MEMS_DataScaled_T MEMS_GetDataMS2(void);
+int16_t MEMS_GetAxesData(SPI_HandleTypeDef *pSPI, uint8_t addr);
+MEMS_DataRaw_t MEMS_GetDataRaw(MEMSHandler_t *pHandler);
+MEMS_DataScaled_t MEMS_GetDataScaled(MEMSHandler_t *pHandler);
+MEMS_DataScaled_t MEMS_GetDataMS2(MEMSHandler_t *pHandler);
 
-void MEMS_X_calibrate(float x_min, float x_max);
-void MEMS_Y_calibrate(float y_min, float y_max);
-void MEMS_Z_calibrate(float z_min, float z_max);
+void MEMS_X_calibrate(MEMSHandler_t *pHandler, float x_min, float x_max);
+void MEMS_Y_calibrate(MEMSHandler_t *pHandler, float y_min, float y_max);
+void MEMS_Z_calibrate(MEMSHandler_t *pHandler, float z_min, float z_max);
 
 #endif
 

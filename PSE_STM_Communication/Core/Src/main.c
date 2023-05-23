@@ -26,8 +26,9 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-MEMS_DataScaled_T MEMSData;
-MEMS_Config_T     MEMSConfig;
+MEMS_DataScaled_t MEMSData;
+MEMSHandler_t     hMEMS;
+MEMS_Config_t     MEMSConfig;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -108,15 +109,15 @@ int main(void)
   MEMSConfig.enableAxes = LIS3DSH_XYZ_ENABLE;
 
   // MEMS Init
-  MEMS_Init(&hspi1, &MEMSConfig);
+  MEMS_Init(&hMEMS, &hspi1, MEMSConfig);
 
-  uint8_t who_am_i[1];
-  MEMS_ReadReg(LIS3DSH_WHO_AM_I_ADDR,who_am_i,1);
+  // uint8_t who_am_i[1];
+  // MEMS_ReadReg(hMEMS.pSPI,LIS3DSH_WHO_AM_I_ADDR,who_am_i,1);
 
   // MEMS Calibration
-//  MEMS_X_calibrate(-1000.0, 980.0);
-//  MEMS_Y_calibrate(-1020.0, 1040.0);
-//  MEMS_Z_calibrate(-920.0, 1040.0);
+  //  MEMS_X_calibrate(-1000.0, 980.0);
+  //  MEMS_Y_calibrate(-1020.0, 1040.0);
+  //  MEMS_Z_calibrate(-920.0, 1040.0);
 
   /* USER CODE END 2 */
 
@@ -125,7 +126,7 @@ int main(void)
   while (1)
   {
 	  // Get MEMS Data
-	  MEMSData = MEMS_GetDataMS2();
+	  MEMSData = MEMS_GetDataMS2(&hMEMS);
 
     /* USER CODE END WHILE */
 
