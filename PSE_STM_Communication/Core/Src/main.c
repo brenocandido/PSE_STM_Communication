@@ -247,17 +247,17 @@ int main(void)
             }
         }
 
-		if (!bufHandler_checkEmpty(&_emHandler))
-		{
-			transmitEmDataToEv();
+        if (!bufHandler_checkEmpty(&_emHandler))
+        {
+            transmitEmDataToEv();
             ledToggler_run(&togglerRed);
-		}
+        }
 
-		if (!bufHandler_checkEmpty(&_evHandler))
-		{
-			transmitEvReqToEm();
+        if (!bufHandler_checkEmpty(&_evHandler))
+        {
+            transmitEvReqToEm();
             ledToggler_run(&togglerGreen);
-		}
+        }
 
     /* USER CODE END WHILE */
 
