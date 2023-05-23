@@ -67,6 +67,9 @@ static UART_HandleTypeDef *pEV_UART = &huart5;
 static BufHandler_t _emHandler;
 static BufHandler_t _evHandler;
 
+static MsgBuffer_t _sensorData = {0};
+static bool _sendSensorData = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,6 +111,11 @@ static void dummyTestFunc()
             LD3_GPIO_Port->BSRR = LED_OFF;
         }
     }
+}
+
+static void triggerSensorDataSend()
+{
+    _sendSensorData = true;
 }
 
 static void transmitEvReqToEm()
@@ -210,8 +218,11 @@ int main(void)
     bufHandler_receiveUartData(&_evHandler);
 
     // Dummy test send to check UART reception.
-	MsgBuffer_t dummyData = {0xAA, 0xBB, 0xCC, 0xDD};
-    bufHandler_sendData(&_emHandler, dummyData);
+    for (uint8_t i = 0; i < MSG_TOTAL_BYTES; i++)
+    {
+        _sensorData[i] = i + 1;
+    }
+    triggerSensorDataSend();
 
   /* USER CODE END 2 */
 
@@ -219,6 +230,21 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
+        // Check first in order to send as soon as the UART is available
+        if (_sendSensorData)
+        {
+            // We use the _emHandler because that's where the EV TX UART is
+            // configured. It's as if the sensor data had come through the EM
+            // UART>
+            bool ret = bufHandler_sendData(&_emHandler, _sensorData);
+
+            // Will only return true when it successfully sent data.
+            if (ret)
+            {
+                _sendSensorData = false;
+            }
+        }
+
 		if (!bufHandler_checkEmpty(&_emHandler))
 		{
 			transmitEmDataToEv();
