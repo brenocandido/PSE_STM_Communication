@@ -210,8 +210,8 @@ int main(void)
     bufHandler_receiveUartData(&_evHandler);
 
     // Dummy test send to check UART reception.
-	uint8_t dummyData[13] = {0xAA, 0xBB, 0xCC, 0xDD};
-	HAL_UART_Transmit_IT(&huart5, dummyData, 13);
+	MsgBuffer_t dummyData = {0xAA, 0xBB, 0xCC, 0xDD};
+    bufHandler_sendData(&_emHandler, dummyData);
 
   /* USER CODE END 2 */
 

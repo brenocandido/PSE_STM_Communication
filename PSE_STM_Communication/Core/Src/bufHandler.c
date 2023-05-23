@@ -45,6 +45,25 @@ bool bufHandler_checkEmpty(BufHandler_t *pHandler)
     return pHandler->bufSendIndex == pHandler->bufRcvIndex;
 }
 
+bool bufHandler_sendData(BufHandler_t *pHandler, MsgBuffer_t data)
+{
+    if (!pHandler)
+    {
+        return false;
+    }
+
+    if (!pHandler->txAvailable)
+    {
+        return false;
+    }
+
+    pHandler->txAvailable = false;
+
+    HAL_UART_Transmit_IT(pHandler->pTxUart, (uint8_t *)data, MSG_TOTAL_BYTES);
+
+    return true;
+}
+
 void bufHandler_increaseRcvIndex(BufHandler_t *pHandler)
 {
     if (!pHandler)

@@ -33,6 +33,8 @@ void bufHandler_setUart(BufHandler_t *pHandler, UART_HandleTypeDef *pTxUart, UAR
 
 bool bufHandler_checkEmpty(BufHandler_t *pHandler);
 
+bool bufHandler_sendData(BufHandler_t *pHandler, MsgBuffer_t data);
+
 void bufHandler_increaseRcvIndex(BufHandler_t *pHandler);
 
 void bufHandler_increaseSendIndex(BufHandler_t *pHandler);
