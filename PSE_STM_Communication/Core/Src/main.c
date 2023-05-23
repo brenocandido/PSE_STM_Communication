@@ -54,6 +54,8 @@ MEMS_Config_t     MEMSConfig;
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
 
@@ -73,6 +75,8 @@ static BufHandler_t _evHandler;
 static MsgBuffer_t _sensorData = {0};
 static bool _sendSensorData = false;
 
+static bool _readSensorData = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -82,6 +86,7 @@ static void MX_SPI1_Init(void);
 static void MX_USB_OTG_FS_HCD_Init(void);
 static void MX_UART4_Init(void);
 static void MX_UART5_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -152,6 +157,48 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	}
 }
 
+// Convert MEMS_DataScaled_t data type to MsgBuffer_t data type
+/*MsgBuffer_t convert_bufType(MEMS_DataScaled_t MEMS_data)
+{
+	MsgBuffer_t MsgBuff_data = {0};
+
+	// Convert x data (LSB first?)
+	MsgBuff_data[0] = MEMS_data.x & 0x000000FF;
+	MsgBuff_data[1] = (MEMS_data.x & 0x0000FF00) >> 8;
+	MsgBuff_data[2] = (MEMS_data.x & 0x00FF0000) >> 16;
+	MsgBuff_data[3] = (MEMS_data.x & 0xFF000000) >> 24;
+
+	// Convert y data (LSB first?)
+	MsgBuff_data[4] = MEMS_data.y & 0x000000FF;
+	MsgBuff_data[5] = (MEMS_data.y & 0x0000FF00) >> 8;
+	MsgBuff_data[6] = (MEMS_data.y & 0x00FF0000) >> 16;
+	MsgBuff_data[7] = (MEMS_data.y & 0xFF000000) >> 24;
+
+	// Convert z data (LSB first?)
+	MsgBuff_data[8] = MEMS_data.z & 0x000000FF;
+	MsgBuff_data[9] = (MEMS_data.z & 0x0000FF00) >> 8;
+	MsgBuff_data[10] = (MEMS_data.z & 0x00FF0000) >> 16;
+	MsgBuff_data[11] = (MEMS_data.z & 0xFF000000) >> 24;
+
+	return MsgBuff_data;
+}*/
+
+// Trigger sampling of sensor data
+void triggerReadSensorData()
+{
+	_readSensorData = true;
+}
+
+// Timer 2 callback -> request sensor read (LED for debug)
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
+{
+	// Request sensor data read
+	triggerReadSensorData();
+
+	// Toggle debug LED
+    HAL_GPIO_TogglePin(GPIOD, LD6_Pin);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -186,6 +233,7 @@ int main(void)
   MX_USB_OTG_FS_HCD_Init();
   MX_UART4_Init();
   MX_UART5_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   // MEMS Configuration
@@ -226,6 +274,9 @@ int main(void)
     }
     triggerSensorDataSend();
 
+    // Start timer 2
+    HAL_TIM_Base_Start_IT(&htim2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -257,6 +308,22 @@ int main(void)
         {
             transmitEvReqToEm();
             ledToggler_run(&togglerGreen);
+        }
+
+        // Sample sensor data if requested ...
+        if (_readSensorData)
+        {
+        	// Read data from LIS3DSH
+        	MEMSData = MEMS_GetDataMS2(&hMEMS);
+
+        	// Convert MEMS_DataScaled_t to MsgBuffer_t type
+        	// _sensorData = convert_bufType(MEMSData);
+
+        	// Trigger UART to send sensor data (should have a check of UART current usage?)
+        	triggerSensorDataSend();
+
+        	// Clear flag t enable a new sensor read request
+        	_readSensorData = false;
         }
 
     /* USER CODE END WHILE */
@@ -346,6 +413,51 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 1000;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 16800;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
 
 }
 
