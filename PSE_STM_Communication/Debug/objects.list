@@ -1,3 +1,4 @@
+"./Core/Src/MEMS_LIS3DSH.o"
 "./Core/Src/bufHandler.o"
 "./Core/Src/ledToggler.o"
 "./Core/Src/main.o"
