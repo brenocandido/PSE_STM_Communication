@@ -116,6 +116,9 @@ typedef struct
 {
     SPI_HandleTypeDef *pSPI;
 	MEMS_Config_t config;
+	MEMS_DataRaw_t rawData;
+	MEMS_DataScaled_t scaledData;
+	MEMS_DataScaled_t accData;
 } MEMSHandler_t;
 
 /* Function prototypes -----------------------------------------------*/
@@ -125,9 +128,10 @@ void MEMS_ReadReg(SPI_HandleTypeDef *pSPI, uint8_t addr, uint8_t *data, uint8_t 
 void selectSensitivity(MEMS_Config_t *pConfig);
 
 int16_t MEMS_GetAxesData(SPI_HandleTypeDef *pSPI, uint8_t addr);
-MEMS_DataRaw_t MEMS_GetDataRaw(MEMSHandler_t *pHandler);
-MEMS_DataScaled_t MEMS_GetDataScaled(MEMSHandler_t *pHandler);
-MEMS_DataScaled_t MEMS_GetDataMS2(MEMSHandler_t *pHandler);
+void MEMS_processDataRaw(MEMSHandler_t *pHandler);
+void MEMS_processDataScaled(MEMSHandler_t *pHandler);
+void MEMS_processDataMS2(MEMSHandler_t *pHandler);
+MEMS_DataScaled_t MEMS_getDataMS2(MEMSHandler_t *pHandler);
 
 void MEMS_X_calibrate(MEMSHandler_t *pHandler, float x_min, float x_max);
 void MEMS_Y_calibrate(MEMSHandler_t *pHandler, float y_min, float y_max);
