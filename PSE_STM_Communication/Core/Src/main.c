@@ -26,6 +26,7 @@
 #include <stdbool.h>
 
 #include "bufHandler.h"
+#include "ledToggler.h"
 
 /* USER CODE END Includes */
 
@@ -85,33 +86,6 @@ static void MX_UART5_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-// For signaling reception reception
-static void dummyTestFunc()
-{
-    const uint32_t LED_ON = LD3_Pin << 16;
-	const uint32_t LED_OFF = LD3_Pin;
-	const uint32_t CNT_MAX = 250;
-
-	static uint32_t cnt = 0;
-	static uint8_t ledState = 0;
-
-    cnt++;
-    if (cnt >= CNT_MAX)
-    {
-        cnt = 0;
-        ledState = !ledState;
-
-        if (ledState)
-        {
-            LD3_GPIO_Port->BSRR = LED_ON;
-        }
-        else
-        {
-            LD3_GPIO_Port->BSRR = LED_OFF;
-        }
-    }
-}
 
 static void triggerSensorDataSend()
 {
@@ -212,6 +186,12 @@ int main(void)
   MX_UART5_Init();
   /* USER CODE BEGIN 2 */
 
+    LedToggler_t togglerRed;
+    LedToggler_t togglerGreen;
+
+    ledToggler_init(&togglerRed, 250, LD5_GPIO_Port, LD5_Pin);
+    ledToggler_init(&togglerGreen, 250, LD4_GPIO_Port, LD4_Pin);
+
     bufHandler_init(&_emHandler, _emMsgBuf, BUFFER_MSG_CAPACITY);
     bufHandler_init(&_evHandler, _evMsgBuf, BUFFER_MSG_CAPACITY);
 
@@ -252,15 +232,13 @@ int main(void)
 		if (!bufHandler_checkEmpty(&_emHandler))
 		{
 			transmitEmDataToEv();
-
-            dummyTestFunc();
+            ledToggler_run(&togglerRed);
 		}
 
 		if (!bufHandler_checkEmpty(&_evHandler))
 		{
 			transmitEvReqToEm();
-
-			dummyTestFunc();
+            ledToggler_run(&togglerGreen);
 		}
 
     /* USER CODE END WHILE */
