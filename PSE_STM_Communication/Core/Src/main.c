@@ -59,6 +59,8 @@ TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
+DMA_HandleTypeDef hdma_uart4_rx;
+DMA_HandleTypeDef hdma_uart5_rx;
 
 HCD_HandleTypeDef hhcd_USB_OTG_FS;
 
@@ -83,6 +85,7 @@ static bool _readSensorData = false;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USB_OTG_FS_HCD_Init(void);
 static void MX_UART4_Init(void);
@@ -221,6 +224,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_SPI1_Init();
   MX_USB_OTG_FS_HCD_Init();
   MX_UART4_Init();
@@ -258,13 +262,6 @@ int main(void)
 
     bufHandler_receiveUartData(&_emHandler);
     bufHandler_receiveUartData(&_evHandler);
-
-    // Dummy test send to check UART reception.
-    for (uint8_t i = 0; i < MSG_TOTAL_BYTES; i++)
-    {
-        _sensorData[i] = i + 1;
-    }
-    triggerSensorDataSend();
 
     // Start timer 2
     HAL_TIM_Base_Start_IT(&htim2);
@@ -431,7 +428,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 1000;
+  htim2.Init.Prescaler = 84;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 16800;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -551,6 +548,25 @@ static void MX_USB_OTG_FS_HCD_Init(void)
   /* USER CODE BEGIN USB_OTG_FS_Init 2 */
 
   /* USER CODE END USB_OTG_FS_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+  /* DMA1_Stream2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
 
 }
 

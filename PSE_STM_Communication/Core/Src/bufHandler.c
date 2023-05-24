@@ -106,11 +106,17 @@ bool bufHandler_transmitUartData(BufHandler_t *pHandler)
         return false;
     }
 
-    pHandler->txAvailable = false;
+    HAL_StatusTypeDef ret = HAL_UART_Transmit_IT(pHandler->pTxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufSendIndex], MSG_TOTAL_BYTES);
 
-    HAL_UART_Transmit_IT(pHandler->pTxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufSendIndex], MSG_TOTAL_BYTES);
-
-    return true;
+    if (ret == HAL_OK)
+    {
+        pHandler->txAvailable = false;
+        return true;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 void bufHandler_receiveUartData(BufHandler_t *pHandler)
@@ -120,7 +126,7 @@ void bufHandler_receiveUartData(BufHandler_t *pHandler)
         return;
     }
 
-	HAL_UART_Receive_IT(pHandler->pRxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufRcvIndex], MSG_TOTAL_BYTES);
+	HAL_UART_Receive_DMA(pHandler->pRxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufRcvIndex], MSG_TOTAL_BYTES);
 }
 
 void bufHandler_setTxAvailable(BufHandler_t *pHandler)
