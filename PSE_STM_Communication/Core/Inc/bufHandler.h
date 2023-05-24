@@ -1,11 +1,16 @@
 #ifndef BUFHANDLER_H_
 #define BUFHANDLER_H_
 
-#include "stm32f4xx_hal.h"
-
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+
+#ifndef CUNIT_TEST
+    #include "stm32f4xx_hal.h"
+#else
+    typedef (void *) UART_HandleTypeDef;
+#endif // CUNIT_TEST
+
 
 #define MSG_TOTAL_BYTES			13
 

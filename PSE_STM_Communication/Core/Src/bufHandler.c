@@ -1,6 +1,14 @@
 #include "bufHandler.h"
 #include <string.h>
 
+#ifndef CUNIT_TEST
+    #define UART_TRANSMIT(uart, data, bytes) HAL_UART_Transmit_IT(uart, data, bytes)
+    #define UART_RECEIVE(uart, data, bytes) HAL_UART_Receive_DMA(uart, data, bytes)
+#else
+    #define UART_TRANSMIT(uart, data, bytes) 
+    #define UART_RECEIVE(uart, data, bytes) 
+#endif // CUNIT_TEST
+
 static void _increaseBufIndex(int *pIndex, const int BUF_SIZE);
 
 void bufHandler_init(BufHandler_t *pHandler, MsgBuffer_t *msgBuf, size_t bufSize)
@@ -59,7 +67,7 @@ bool bufHandler_sendData(BufHandler_t *pHandler, MsgBuffer_t data)
 
     pHandler->txAvailable = false;
 
-    HAL_UART_Transmit_IT(pHandler->pTxUart, (uint8_t *)data, MSG_TOTAL_BYTES);
+    UART_TRANSMIT(pHandler->pTxUart, (uint8_t *)data, MSG_TOTAL_BYTES);
 
     return true;
 }
@@ -106,7 +114,7 @@ bool bufHandler_transmitUartData(BufHandler_t *pHandler)
         return false;
     }
 
-    HAL_StatusTypeDef ret = HAL_UART_Transmit_IT(pHandler->pTxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufSendIndex], MSG_TOTAL_BYTES);
+    HAL_StatusTypeDef ret = UART_TRANSMIT(pHandler->pTxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufSendIndex], MSG_TOTAL_BYTES);
 
     if (ret == HAL_OK)
     {
@@ -126,7 +134,7 @@ void bufHandler_receiveUartData(BufHandler_t *pHandler)
         return;
     }
 
-	HAL_UART_Receive_DMA(pHandler->pRxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufRcvIndex], MSG_TOTAL_BYTES);
+	UART_RECEIVE(pHandler->pRxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufRcvIndex], MSG_TOTAL_BYTES);
 }
 
 void bufHandler_setTxAvailable(BufHandler_t *pHandler)
