@@ -11,11 +11,11 @@
 
 static void _increaseBufIndex(int *pIndex, const int BUF_SIZE);
 
-void bufHandler_init(BufHandler_t *pHandler, MsgBuffer_t *msgBuf, size_t bufSize)
+bool bufHandler_init(BufHandler_t *pHandler, MsgBuffer_t *msgBuf, size_t bufSize)
 {
     if (!pHandler || !msgBuf || bufSize <= 0)
     {
-        return;
+        return false;
     }
 
     pHandler->msgBuf = msgBuf;
@@ -30,17 +30,21 @@ void bufHandler_init(BufHandler_t *pHandler, MsgBuffer_t *msgBuf, size_t bufSize
     pHandler->txAvailable = true;
 
     pHandler->BUF_SIZE = bufSize;
+
+    return true;
 }
 
-void bufHandler_setUart(BufHandler_t *pHandler, UART_HandleTypeDef *pTxUart, UART_HandleTypeDef *pRxUart)
+bool bufHandler_setUart(BufHandler_t *pHandler, UART_HandleTypeDef *pTxUart, UART_HandleTypeDef *pRxUart)
 {
     if (!pHandler || !pTxUart || !pRxUart)
     {
-        return;
+        return false;
     }
 
     pHandler->pRxUart = pRxUart;
     pHandler->pTxUart = pTxUart;
+
+    return true;
 }
 
 bool bufHandler_checkEmpty(BufHandler_t *pHandler)
@@ -82,24 +86,28 @@ const uint8_t *bufHandler_getReceivedData(BufHandler_t *pHandler)
     return pHandler->msgBuf[pHandler->bufRcvIndex];
 }
 
-void bufHandler_increaseRcvIndex(BufHandler_t *pHandler)
+bool bufHandler_increaseRcvIndex(BufHandler_t *pHandler)
 {
     if (!pHandler)
     {
-        return;
+        return false;
     }
 
     _increaseBufIndex(&pHandler->bufRcvIndex, pHandler->BUF_SIZE);
+
+    return true;
 }
 
-void bufHandler_increaseSendIndex(BufHandler_t *pHandler)
+bool bufHandler_increaseSendIndex(BufHandler_t *pHandler)
 {
     if (!pHandler)
     {
-        return;
+        return false;
     }
 
     _increaseBufIndex(&pHandler->bufSendIndex, pHandler->BUF_SIZE);
+
+    return true;
 }
 
 bool bufHandler_transmitUartData(BufHandler_t *pHandler)
@@ -137,14 +145,16 @@ void bufHandler_receiveUartData(BufHandler_t *pHandler)
 	UART_RECEIVE(pHandler->pRxUart, (uint8_t *)&pHandler->msgBuf[pHandler->bufRcvIndex], MSG_TOTAL_BYTES);
 }
 
-void bufHandler_setTxAvailable(BufHandler_t *pHandler)
+bool bufHandler_setTxAvailable(BufHandler_t *pHandler)
 {
     if (!pHandler)
     {
-        return;
+        return false;
     }
 
     pHandler->txAvailable = true;
+
+    return true;
 }
 
 UART_HandleTypeDef *bufHandler_txUart(BufHandler_t *pHandler)
