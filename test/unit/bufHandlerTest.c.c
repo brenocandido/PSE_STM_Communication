@@ -14,15 +14,11 @@ int clean_suite(void) { return 0; }
 /************* Test case functions ****************/
 void test_bufHandler(void)
 {
-    BufHandler_t testHandler;
-
-    /* Fail */
-        // 1. Wrong Argument
-    CU_ASSERT_TRUE(bufHandler_increaseSendIndex(0));
+    BufHandler_t *pTest = NULL;
 
     /* Pass */
         // 1. Right Argument
-    CU_ASSERT_TRUE(testHandler);
+    CU_ASSERT_FALSE(bufHandler_init(pTest));
 
 }
 
@@ -58,13 +54,6 @@ int main()
     printf("\n");
     CU_basic_show_failures(CU_get_failure_list());
     printf("\n\n");
-
-    /* Run all tests using the automated interface */
-    // CU_automated_run_tests();
-    // CU_list_tests_to_file();
-
-    /* Run all tests using the console interface */
-    // CU_console_run_tests();
 
     /* Clean up registry and return */
     CU_cleanup_registry();
