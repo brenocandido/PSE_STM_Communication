@@ -123,7 +123,7 @@ bool bufHandler_transmitUartData(BufHandler_t *pHandler)
     }
     else
     {
-        return true;
+        return false;
     }
 }
 
