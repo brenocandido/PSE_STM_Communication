@@ -5,7 +5,7 @@
     #define UART_TRANSMIT(uart, data, bytes) HAL_UART_Transmit_IT(uart, data, bytes)
     #define UART_RECEIVE(uart, data, bytes) HAL_UART_Receive_DMA(uart, data, bytes)
 #else
-    #define UART_TRANSMIT(uart, data, bytes) 
+    #define UART_TRANSMIT(uart, data, bytes)    true
     #define UART_RECEIVE(uart, data, bytes) 
 #endif // CUNIT_TEST
 
@@ -51,7 +51,7 @@ bool bufHandler_checkEmpty(BufHandler_t *pHandler)
 {
     if (!pHandler)
     {
-        return true;
+        return false;
     }
 
     return pHandler->bufSendIndex == pHandler->bufRcvIndex;

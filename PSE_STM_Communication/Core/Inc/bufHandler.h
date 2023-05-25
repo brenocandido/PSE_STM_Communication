@@ -8,7 +8,10 @@
 #ifndef CUNIT_TEST
     #include "stm32f4xx_hal.h"
 #else
-    typedef (void *) UART_HandleTypeDef;
+    #define HAL_OK  true
+
+    typedef void *UART_HandleTypeDef;
+    typedef bool HAL_StatusTypeDef;
 #endif // CUNIT_TEST
 
 
